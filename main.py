@@ -18,7 +18,7 @@ Created on 23 mars 2023
 #                                                                #
 #----------------------------------------------------------------#
 
-from Src.process.simulator import Simulator
+from Src.process.simulator_v2 import Simulator
 
 #----------------------------------------------------------------#
 #                                                                #
