@@ -1,0 +1,6 @@
+
+Simulation correctly ended. 
+ The simulation has been running for 4.809 seconds. 
+The simulation included 30000 iterations, latest accuracy value : 0.0, cumulated regrets: 0.0.
+
+

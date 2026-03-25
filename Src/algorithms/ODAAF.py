@@ -3,18 +3,19 @@ import random as rd
 
 class ODAAF():
 
-    def __init__(self, arms = None):
+    def __init__(self, arms = None, horizon=0):
         self.ground_arms = arms
         self.arms_pool = self.ground_arms.copy()
         self.name = "ODAAF"
-        self.arms_payoff_vectors = {"cumulated_rewards" : np.zeros(len(self.ground_arms)),
-                                    "tries" : np.zeros(len(self.ground_arms))
-                                    }
+        
+        self.horizon = horizon
+        
         self.arm_chosen = None
         self.threshold = 4
         self.delta = 0.5
+        self.min_delta = 1*10**(-10)
         #Aggregated anonymous feedback
-        self.X = []
+        self.X = np.zeros(self.horizon)
         #Arms played history 
         self.Tj = []
         for arm in self.ground_arms["arm_id"]:
@@ -22,95 +23,151 @@ class ODAAF():
             self.Tj.append([])
         self.C1, self.C2 = 1, 1
         #Majoring distribution
-        self.d = 1
+        self.d = np.mean(self.ground_arms["delay_mean"])
 
 
-    def run(self, observed_value, user_context=None):
-        self.init_choice(observed_value)
-        self.arm_chosen = self.choose_action()
+    def run(self,m, t, results):
+        """
+        Inputs:
+            m: int phase index
+            t: int iteration index
+            results: dataframe Results data with delays and feedbacks
+        """
+        nb_arms_left = len(self.arms_pool["arm_id"])
+        print(f"{nb_arms_left} arms left")
+        if nb_arms_left == 1:
+            t = self.dumbStep(m, t, results)
+        else :
+            t = self.stepOne(m, t, results)
+            
+            if t >= self.horizon:
+                print(f"Final iteration: {t}")
+                return t
+            
+            self.stepTwo()
+            
+            self.stepThree()
+            
+            t = self.stepFour(m, t)
         
-        return self.arm_chosen
-    
+            
+        return t
+        
 
-    def init_choice(self, observation):
-        self.arm_chosen = -1
-        self.arms_pool = self.ground_arms[self.ground_arms["arm_id"].isin(observation["arm_id"])]
-        self.arms_pool.reset_index(inplace=True)
 
+    def get_nm(self, m):
+        """
+        Compute the n value for phase m
+        """
+        
+        term1 = (self.C1*np.log(self.horizon*self.delta**2))/(self.delta**2)
+        term2 = (self.C2*m *self.d)/self.delta
+        
+        return int(max(1, term1 + term2))
+        
+        
     
-    def stepOne(self, m, t, horizon, results):
+    def dumbStep(self, m, t, results):
+        """
+        Play arms carelessly
+        """
+        
+        for arm_id in self.arms_pool["arm_id"]:
+            
+            self.arm_chosen =self.arms_pool["arm_id"][arm_id]
+            
+            print(f"running arm {arm_id} for {self.horizon-t} steps")
+            
+            while t < self.horizon:
+                
+                observed_context = rd.choice(results["context_id"])
+
+                observed_value = results[(results["context_id"]== observed_context) & (results["arm_id"]== arm_id)]
+                observed_delay = observed_value["delay"].iloc[0]
+                
+                #self.evaluate equivalent 
+                observed_reward = 1 if observed_value["feedback"].iloc[0] >= self.threshold else 0
+    
+                index = int(observed_delay) + t
+                
+                if index < self.horizon :
+                    self.X[index]+= observed_reward            
+                
+                self.Tj[arm_id].append(t)
+                t+=1
+        return t    
+    
+    def stepOne(self, m, t, results):
         """
         Play arms
         """
-        term1 = (self.C1*np.log(horizon*self.delta**2))/(self.delta**2)
-        term2 = (self.C2*m *self.d)/self.delta
-        nm = int(max(1, term1 + term2))
+        nm = self.get_nm(m)
+        
         for arm_id in self.arms_pool["arm_id"]:
-            while len(self.Tj[arm_id]) < nm :
-                observed_value = rd.choice(results[results["arm_id"] == arm_id]).copy()
-                observed_delay = self.get_delay(observed_value["arm_id"].iloc[0])
+            
+            self.arm_chosen =self.arms_pool["arm_id"][arm_id]
+            
+            while len(self.Tj[arm_id]) < nm and t < self.horizon:
+                
+                observed_context = rd.choice(results["context_id"])
+
+                observed_value = results[(results["context_id"]== observed_context) & (results["arm_id"]== arm_id)]
+                observed_delay = observed_value["delay"].iloc[0]
+                
+                #self.evaluate equivalent 
+                observed_reward = 1 if observed_value["feedback"].iloc[0] >= self.threshold else 0
+    
+                index = int(observed_delay) + t
+                
+                if index < self.horizon :
+                    self.X[index]+= observed_reward            
+                
                 self.Tj[arm_id].append(t)
                 t+=1
+        return t
                 
 
     def stepTwo(self):
         """
         eliminate suboptimal arms
         """
-        pass
+        meanX = np.zeros(len(self.ground_arms))
+        
+        for arm_id in self.arms_pool["arm_id"]:
+            for t in self.Tj[arm_id]:
+                
+                meanX[arm_id] += self.X[t]
+            meanX[arm_id] = meanX[arm_id]/len(self.Tj[arm_id])
+                
+        
+        for arm_id in self.arms_pool["arm_id"]:
+            if meanX[arm_id] + self.delta < max(meanX):
+                self.arms_pool.drop(self.arms_pool[self.arms_pool["arm_id"]== arm_id].index, inplace = True)
+                print(f"Le bras {arm_id} a été supprimé !")
+            
+        
+            
     def stepThree(self):
         """
         Decrease tolerance
         """
-        pass
-    def stepFour(self):
+        self.delta = self.delta/2
+        #Avoids vanishing tolerence bound (div by 0)
+        self.delta = self.min_delta if self.delta < self.min_delta else self.delta 
+        
+        print(f"Delta (tolerance) : {self.delta}")
+
+    def stepFour(self, m, t):
         """
         Bridge period
         """
-        pass
+        nm0 = self.get_nm(m)
+        print(f"nm0:{nm0}")
         
-
-    
-    def choose_action(self):
-        arm_chosen_index = -1
-
-        if np.min(self.arms_payoff_vectors["tries"]) == 0 :
-            i=0
-            for arm in self.arms_pool['arm_id']:
-                arm_pos = self.ground_arms.index[self.ground_arms["arm_id"] == arm]
-
-                if (self.arms_payoff_vectors["tries"][arm_pos] < 1) :
-                    arm_chosen_index = i
-                    break
-
-                i += 1
-
-        if arm_chosen_index == -1 :
-
-            arm_pool_size = len(self.arms_pool['arm_id'])
-            expected_payoff = np.zeros(arm_pool_size) - 1
-            i=0
-            for arm in self.arms_pool['arm_id']:
-                arm_pos = np.where(self.ground_arms["arm_id"] == arm)[0][0]
-                expected_payoff[i] = self.arms_payoff_vectors["cumulated_rewards"][arm_pos] / self.arms_payoff_vectors["tries"][arm_pos]
-                i += 1 
-
-            arm_chosen_index = np.argmax(expected_payoff + np.sqrt((2*np.log(np.sum(self.arms_payoff_vectors["tries"]))) / self.arms_payoff_vectors["tries"]))
-        arm_chosen = self.arms_pool["arm_id"][arm_chosen_index]
-            
-        return arm_chosen
-    
-
-    def evaluate(self, observation):
-        reward = 0
-        feedback = observation["feedback"][observation["arm_id"] == self.arm_chosen].iloc[0]
-        if feedback >= self.threshold:
-            reward = 1
-
-        return reward
-
-
-    def update(self, observation):
-        observed_reward = self.evaluate(observation)
-        self.arms_payoff_vectors["cumulated_rewards"][self.arm_chosen] += observed_reward
-        self.arms_payoff_vectors["tries"][self.arm_chosen] += 1
+        nm1 = self.get_nm(m-1) if m > 1 else 0 
+        print(f"nm1:{nm1}")
+        t+= nm0 - nm1
+        
+        print(f"bridge: {nm0 - nm1}")  
+        
+        return t if t<self.horizon else self.horizon

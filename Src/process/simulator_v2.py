@@ -71,7 +71,7 @@ class Simulator():
         
         
         # datas is a dictionnary of dataframe
-        self.dataset_name = "02-Mushrooms"
+        self.dataset_name = "03-RSASM"
         self.datas = self.data_extraction()
         # Delayed distribution for each arm
         self.datas["arms"]["delay_mean"] = np.zeros(len(self.datas["arms"]))
@@ -82,12 +82,11 @@ class Simulator():
 
         self.datas["results"]["delay"] = np.zeros(len(self.datas["results"]))
         for index, result in self.datas["results"].iterrows() :
-            self.datas["results"]["delay"][index] = self.get_delay(self.datas["results"]["arm_id"][index])
+            self.datas["results"].loc[index,"delay"] = self.get_delay(self.datas["results"].loc[index,"arm_id"])
             
-
-        self.algorithm = ODAAF(self.datas["arms"])
-        
         self.horizon = 30000
+        self.algorithm = ODAAF(self.datas["arms"], self.horizon)
+        
         self.results = ResultStorer(self.horizon)
         self.reporter = ReportGenerator(RM.create_repository_with_timestamp("../Output"), \
                                         (self.dataset_name, self.horizon, self.algorithm.name))
@@ -110,22 +109,21 @@ class Simulator():
         print(self.datas["results"].head())        
         
         self.results.start_time = time.time()
-        for t in range(self.horizon):
-            #randomly select a user context from dataset and their provided feedback
-            user_id = rd.choice(self.datas["contexts"]["context_id"])
-            observed_value = self.datas["results"] \
-                            [self.datas["results"]["context_id"] == user_id].copy()
-            observed_delay = self.get_delay(observed_value["arm_id"].iloc[0])
-                            
+        m = 0
+        t = 1
+        
+        while t <= self.horizon:
+            m+=1
+            print(f"Entering phase :{m}\n Iteration :{t}")
+            t = self.algorithm.run(m, t, self.datas["results"])
             
-            self.results.algorithm_performance["predicted_arms"][t] = self.algorithm.run(observed_value)
-            self.algorithm.update(observed_value)
-            self.results.update_measures(t, observed_value)
+            #self.results.update_measures(t, observed_value)
             
-            
+            # TO CHANGE
             if (time.time() - self.results.start_time == self.life_sign_delay[0]) | \
                 (t % self.life_sign_delay[1] == 0) :
-                self.sign_life(t)
+                
+                self.sign_life(t) if t<self.horizon else self.sign_life(self.horizon-1)
             
             
         self.results.end_time = time.time()

@@ -1,0 +1,2 @@
+Simulation configuration: 
+Dataset: 02-Mushrooms, 30000 iterations, algorithm: ODAAF
