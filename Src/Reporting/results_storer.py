@@ -61,11 +61,21 @@ class ResultStorer():
         self.threshold = 4
         self.algorithm_performance ={"predicted_arms" : np.zeros(horizon),
                                      "correctness" : np.zeros(horizon),
+                                     "cumulated_reward" : np.zeros(horizon),
                                      "accuracy" : np.zeros(horizon),
                                      "cumulated_regrets" : np.zeros(horizon)
                                      }
             
 
+        #-----------------------
+
+    def update_measures_v2(self, iteration, observed_value):
+
+        #We can't mesure when an arm chosen is the right one or not since the rewards are anonymous
+        #self.update_correctness(iteration, observed_value)
+        #self.update_accuracy(iteration)
+        self.update_cumulated_regrets(iteration,observed_value)
+        
         #-----------------------
 
     def update_measures(self, iteration, observed_value):
@@ -75,6 +85,7 @@ class ResultStorer():
         self.update_regrets(iteration)
         
         #-----------------------
+
 
     def update_correctness(self, iteration, observed_value):
         
@@ -103,7 +114,17 @@ class ResultStorer():
                 self.algorithm_performance["cumulated_regrets"][iteration-1] + (1 - self.algorithm_performance["correctness"][iteration])
                              
                                                  
+    #-------------------------
+    def update_cumulated_regrets(self, iteration,observed_value):
+        
+        self.algorithm_performance["cumulated_reward"][iteration] = observed_value
+        
+        self.algorithm_performance["cumulated_regrets"][iteration] =int(iteration*1 - np.sum(self.algorithm_performance["cumulated_reward"]))
+        
+        
+                                                 
     #----------------------------------------------------------------------------------------- 
+     
      
 
 

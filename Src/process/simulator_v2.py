@@ -76,11 +76,15 @@ class Simulator():
         # Delayed distribution for each arm
         self.datas["arms"]["delay_mean"] = np.zeros(len(self.datas["arms"]))
         self.datas["arms"]["delay_var"] = np.zeros(len(self.datas["arms"]))
+        
+        #We assign a distribution of delay for each arm in the dataset
         for index,arm in self.datas["arms"].iterrows() :
             self.datas["arms"]["delay_mean"][index] = rd.randint(3, 10)
             self.datas["arms"]["delay_var"][index] = rd.randint(0, 3)
 
         self.datas["results"]["delay"] = np.zeros(len(self.datas["results"]))
+        print("Computing delays for each observation...")
+        
         for index, result in self.datas["results"].iterrows() :
             self.datas["results"].loc[index,"delay"] = self.get_delay(self.datas["results"].loc[index,"arm_id"])
             
@@ -112,18 +116,17 @@ class Simulator():
         m = 0
         t = 1
         
-        while t <= self.horizon:
+        while t < self.horizon:
             m+=1
+            last_t = t
             print(f"Entering phase :{m}\n Iteration :{t}")
-            t = self.algorithm.run(m, t, self.datas["results"])
-            
-            #self.results.update_measures(t, observed_value)
-            
-            # TO CHANGE
-            if (time.time() - self.results.start_time == self.life_sign_delay[0]) | \
-                (t % self.life_sign_delay[1] == 0) :
-                
-                self.sign_life(t) if t<self.horizon else self.sign_life(self.horizon-1)
+            t , X= self.algorithm.run(m, t, self.datas["results"])
+           
+           
+            #We log each reward generated during one phase inside the algorithm
+            for i in range(last_t,t):
+                self.results.update_measures_v2(i, X[i])
+            self.sign_life(t-1)
             
             
         self.results.end_time = time.time()
@@ -162,8 +165,9 @@ class Simulator():
     def sign_life(self, iteration):
 
         sign_life_message = f"\nSimulator has been running for {round(time.time() - self.results.start_time, 3)} seconds. \n" + \
-                               f"Currently going for iteration {iteration}, latest accuracy value : {round(self.results.algorithm_performance['accuracy'][iteration],3)}," + \
-                               f" cumulated regrets: {round(self.results.algorithm_performance['cumulated_regrets'][iteration],3)}.\n\n"
+                               f"Currently going for iteration {iteration}, latest accuracy value : {round(100*np.sum(self.results.algorithm_performance["cumulated_reward"])/iteration+1,2)}," + \
+                               f" cumulated regrets: {round(self.results.algorithm_performance['cumulated_regrets'][iteration],3)}.\n\n" \
+                                   
 
         self.reporter.log_generator(sign_life_message)
         
@@ -172,7 +176,7 @@ class Simulator():
     def end_sign(self):
 
         end_message = f"\nSimulation correctly ended. \n The simulation has been running for {round(self.results.end_time - self.results.start_time, 3)} seconds. \n" + \
-                        f"The simulation included {self.horizon} iterations, latest accuracy value : {round(self.results.algorithm_performance['accuracy'][self.horizon-1],3)}," + \
+                        f"The simulation included {self.horizon} iterations,latest accuracy value : {round(100*np.sum(self.results.algorithm_performance["cumulated_reward"])/self.horizon,2)}," + \
                         f" cumulated regrets: {round(self.results.algorithm_performance['cumulated_regrets'][self.horizon-1],3)}.\n\n"
 
         self.reporter.log_generator(end_message)

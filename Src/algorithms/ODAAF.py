@@ -12,7 +12,7 @@ class ODAAF():
         
         self.arm_chosen = None
         self.threshold = 4
-        self.delta = 0.5
+        self.delta = [0,0.5]
         self.min_delta = 1*10**(-10)
         #Aggregated anonymous feedback
         self.X = np.zeros(self.horizon)
@@ -32,7 +32,8 @@ class ODAAF():
             m: int phase index
             t: int iteration index
             results: dataframe Results data with delays and feedbacks
-        """
+        """      
+        
         nb_arms_left = len(self.arms_pool["arm_id"])
         print(f"{nb_arms_left} arms left")
         if nb_arms_left == 1:
@@ -42,16 +43,17 @@ class ODAAF():
             
             if t >= self.horizon:
                 print(f"Final iteration: {t}")
-                return t
+                
+                return t, self.X
             
-            self.stepTwo()
+            self.stepTwo(m)
             
             self.stepThree()
             
             t = self.stepFour(m, t)
         
             
-        return t
+        return t, self.X
         
 
 
@@ -60,8 +62,8 @@ class ODAAF():
         Compute the n value for phase m
         """
         
-        term1 = (self.C1*np.log(self.horizon*self.delta**2))/(self.delta**2)
-        term2 = (self.C2*m *self.d)/self.delta
+        term1 = (self.C1*np.log(self.horizon*self.delta[m]**2))/(self.delta[m]**2)
+        term2 = (self.C2*m *self.d)/self.delta[m]
         
         return int(max(1, term1 + term2))
         
@@ -127,7 +129,7 @@ class ODAAF():
         return t
                 
 
-    def stepTwo(self):
+    def stepTwo(self, m):
         """
         eliminate suboptimal arms
         """
@@ -141,7 +143,7 @@ class ODAAF():
                 
         
         for arm_id in self.arms_pool["arm_id"]:
-            if meanX[arm_id] + self.delta < max(meanX):
+            if meanX[arm_id] + self.delta[m] < max(meanX):
                 self.arms_pool.drop(self.arms_pool[self.arms_pool["arm_id"]== arm_id].index, inplace = True)
                 print(f"Le bras {arm_id} a été supprimé !")
             
@@ -151,11 +153,11 @@ class ODAAF():
         """
         Decrease tolerance
         """
-        self.delta = self.delta/2
+        self.delta.append(self.delta[-1]/2)
         #Avoids vanishing tolerence bound (div by 0)
-        self.delta = self.min_delta if self.delta < self.min_delta else self.delta 
+        self.delta[-1] = self.min_delta if self.delta[-1] < self.min_delta else self.delta[-1] 
         
-        print(f"Delta (tolerance) : {self.delta}")
+        print(f"Delta (tolerance) : {self.delta[-2]}")
 
     def stepFour(self, m, t):
         """
