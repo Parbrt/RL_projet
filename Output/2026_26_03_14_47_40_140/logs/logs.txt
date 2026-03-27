@@ -1,0 +1,11 @@
+
+Simulator has been running for 5.142 seconds. 
+Currently going for iteration 29999, latest accuracy value : 0.0, cumulated regrets: 0.0.
+
+
+
+Simulation correctly ended. 
+ The simulation has been running for 5.144 seconds. 
+The simulation included 30000 iterations, latest accuracy value : 0.0, cumulated regrets: 0.0.
+
+

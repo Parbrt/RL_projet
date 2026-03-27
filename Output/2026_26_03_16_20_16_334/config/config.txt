@@ -1,0 +1,2 @@
+Simulation configuration: 
+Dataset: 03-RSASM, 30000 iterations, algorithm: linUCB

@@ -68,11 +68,12 @@ def test_difference() :
         for j in range (OBSERVATIONS):
             observations_classic["mean_reg"][-1] += observations_classic["regret"][j][i]
             observations_ODAAF["mean_reg"][-1] += observations_ODAAF["regret"][j][i]
-        observations_classic["mean_reg"][-1] = observations_classic["mean_reg"][-1] / HORIZON
-        observations_ODAAF["mean_reg"][-1] = observations_ODAAF["mean_reg"][-1] / HORIZON
+        observations_classic["mean_reg"][-1] = observations_classic["mean_reg"][-1] / OBSERVATIONS
+        observations_ODAAF["mean_reg"][-1] = observations_ODAAF["mean_reg"][-1] / OBSERVATIONS
         
     print(f"mean final regret for \nODAAF : {observations_ODAAF['mean_reg'][-1]}\nUCB : {observations_classic['mean_reg'][-1]}")
     plt.plot(index, observations_classic["mean_reg"],label='UCB' )
+    plt.legend()
     plt.plot(index, observations_ODAAF["mean_reg"],label='ODAAF' )
     plt.title('Mean Regret Evolution')
     plt.xlabel('Iteration')

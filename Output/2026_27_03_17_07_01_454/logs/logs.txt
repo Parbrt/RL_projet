@@ -1,0 +1,36 @@
+
+Simulator has been running for 0.4 seconds. 
+Currently going for iteration 931, latest accuracy value : 32.15, cumulated regrets: 641.0.
+
+
+
+Simulator has been running for 2.763 seconds. 
+Currently going for iteration 3163, latest accuracy value : 32.84, cumulated regrets: 2156.0.
+
+
+
+Simulator has been running for 8.874 seconds. 
+Currently going for iteration 6963, latest accuracy value : 39.43, cumulated regrets: 4287.0.
+
+
+
+Simulator has been running for 14.506 seconds. 
+Currently going for iteration 12428, latest accuracy value : 46.62, cumulated regrets: 6758.0.
+
+
+
+Simulator has been running for 26.133 seconds. 
+Currently going for iteration 23944, latest accuracy value : 52.33, cumulated regrets: 11653.0.
+
+
+
+Simulator has been running for 28.888 seconds. 
+Currently going for iteration 29999, latest accuracy value : 53.74, cumulated regrets: 14178.0.
+
+
+
+Simulation correctly ended. 
+ The simulation has been running for 28.896 seconds. 
+The simulation included 30000 iterations,latest accuracy value : 52.74, cumulated regrets: 14178.0.
+
+

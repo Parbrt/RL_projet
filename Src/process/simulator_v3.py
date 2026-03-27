@@ -84,8 +84,8 @@ class SimulatorAAD():
         
         #We assign a distribution of delay for each arm in the dataset
         for index,arm in self.datas["arms"].iterrows() :
-            self.datas["arms"]["delay_mean"][index] = rd.randint(3, 10)
-            self.datas["arms"]["delay_var"][index] = rd.randint(0, 3)
+            self.datas["arms"].loc[index, "delay_mean"] = rd.randint(3, 10)
+            self.datas["arms"].loc[index, "delay_var"] = rd.randint(0, 3)
 
         self.datas["results"]["delay"] = np.zeros(len(self.datas["results"]))
         print("Computing delays for each observation...")
