@@ -34,6 +34,8 @@ from Src.algorithms.UCB import UCB
 from Src.algorithms.ODAAF import ODAAF
 from Src.algorithms.Thompson import Thompson
 from Src.algorithms.linUCB import linUCB
+from Src.algorithms.AADUCB import AADUCB
+
 
 
 
@@ -63,9 +65,9 @@ from Src.algorithms.linUCB import linUCB
 #----------------------------------------------------------------#
 
 
-class SimulatorODAAF():
+class SimulatorAAD():
     """
-    Implement the Cumulated Anonymous Delay for the ODAAF algorithme.
+    Implement the Delayed Anonymous Aggregated Reward for a classic algorithme.
     """
     
     def __init__(self):
@@ -92,7 +94,7 @@ class SimulatorODAAF():
             self.datas["results"].loc[index,"delay"] = self.get_delay(self.datas["results"].loc[index,"arm_id"])
             
         self.horizon = 30000
-        self.algorithm = ODAAF(self.datas["arms"], self.horizon)
+        self.algorithm = AADUCB(self.datas["arms"])
         
         self.results = ResultStorer(self.horizon)
         self.reporter = ReportGenerator(RM.create_repository_with_timestamp("../Output"), \
@@ -100,6 +102,9 @@ class SimulatorODAAF():
         
         # 1st parameter for time in seconds, 2nd for number of iterations
         self.life_sign_delay = (300, 5000)
+
+        #Anonymous Aggregated Rewards
+        self.X = np.zeros(self.horizon)
         
         
         #-----------------------
@@ -116,21 +121,30 @@ class SimulatorODAAF():
         print(self.datas["results"].head())        
         
         self.results.start_time = time.time()
-        m = 0
         t = 1
         
         while t < self.horizon:
-            m+=1
-            last_t = t
-            print(f"Entering phase :{m}\n Iteration :{t}")
-            t , X= self.algorithm.run(m, t, self.datas["results"])
-           
+            arm_chosen= self.algorithm.run(self.datas["results"])
+            observed_context = rd.choice(self.datas["results"]["context_id"])
+
+            observed_value = self.datas["results"][(self.datas['results']["context_id"]== observed_context) & (self.datas["results"]["arm_id"]== arm_chosen)]
+            observed_delay = observed_value["delay"].iloc[0]
+                
+            #self.evaluate equivalent 
+            observed_reward = 1 if observed_value["feedback"].iloc[0] >= self.algorithm.threshold else 0
+    
+            index = int(observed_delay) + t
+                
+            if index < self.horizon :
+                self.X[index]+= observed_reward            
+                
            
             #We log each reward generated during one phase inside the algorithm
-            for i in range(last_t,t):
-                self.results.update_measures_v2(i, X[i])
-            self.sign_life(t-1)
-            
+            self.results.update_measures_v2(t, self.X[t])
+            self.algorithm.update(self.X[t])
+            if t%(self.horizon /10 )==0:
+                self.sign_life(t-1)
+            t+=1
             
         self.results.end_time = time.time()
         self.end_sign()
