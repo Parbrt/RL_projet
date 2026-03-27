@@ -50,7 +50,7 @@ class ODAAF():
             
             self.stepThree()
             
-            t = self.stepFour(m, t)
+            t = self.stepFour(m, t, results)
         
             
         return t, self.X
@@ -159,17 +159,32 @@ class ODAAF():
         
         print(f"Delta (tolerance) : {self.delta[-2]}")
 
-    def stepFour(self, m, t):
+    def stepFour(self, m, t, results): 
         """
         Bridge period
         """
         nm0 = self.get_nm(m)
-        print(f"nm0:{nm0}")
-        
-        nm1 = self.get_nm(m-1) if m > 1 else 0 
-        print(f"nm1:{nm1}")
-        t+= nm0 - nm1
-        
-        print(f"bridge: {nm0 - nm1}")  
-        
-        return t if t<self.horizon else self.horizon
+        nm1 = self.get_nm(m - 1) if m > 1 else 0
+        bridge_length = nm0 - nm1
+
+        print(f"Bridge: {bridge_length} steps")
+
+        bridge_arm = self.arms_pool["arm_id"].iloc[0]
+
+        steps_done = 0
+        while steps_done < bridge_length and t < self.horizon:
+
+            observed_context = rd.choice(results["context_id"].unique().tolist())
+            observed_value = results[(results["context_id"] == observed_context) & (results["arm_id"] == bridge_arm)]
+
+            observed_delay = observed_value["delay"].iloc[0]
+            observed_reward = 1 if observed_value["feedback"].iloc[0] >= self.threshold else 0
+
+            index = int(observed_delay) + t
+            if index < self.horizon:
+                self.X[index] += observed_reward
+
+            t += 1
+            steps_done += 1
+
+        return t if t < self.horizon else self.horizon
